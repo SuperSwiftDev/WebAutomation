@@ -1,7 +1,23 @@
 {
     "cSpell.words": [
+        "codellama",
+        "dbg",
         "DSL",
         "endfor",
-        "LLM"
+        "fmt",
+        "indexmap",
+        "jsonobject",
+        "llamaguard",
+        "LLM",
+        "logit",
+        "logits",
+        "logprobs",
+        "mixtral",
+        "newtypes",
+        "OCTO",
+        "repr",
+        "reqwest",
+        "serde",
+        "Vec"
     ]
 }
