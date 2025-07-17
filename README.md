@@ -1,3 +1,7 @@
+# XML-AI Moved
+
+I'm continuing the work on XML-AI over here [colbyn/AgenticWorkflow](https://github.com/colbyn/AgenticWorkflow).
+
 # Work In Progress 
 
 Working on a new DSL, a rewrite of the basic implementation from [WebCompiler](https://github.com/SuperSwiftDev/WebCompiler).
