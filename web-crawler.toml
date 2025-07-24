@@ -1,12 +1,7 @@
 [[projects]]
-id = "rsseau-en"
+id = "rsseau"
 seed_urls = ["https://rsseau.fr/en/"]
-whitelist.domains = ["rsseau.fr"]
-blacklist.protocols = ["tel"]
 
 [[projects]]
 id = "spider-cloud"
 seed_urls = ["https://spider.cloud"]
-whitelist.domains = ["spider.cloud"]
-blacklist.protocols = ["tel"]
-

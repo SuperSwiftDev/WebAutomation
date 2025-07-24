@@ -1,5 +1,5 @@
 # Example
 
 ```
-$ cargo run --bin web-crawler -- run web-automation.toml --id spider-cloud
+$ cargo run --bin web-crawler -- run web-crawler.toml --id spider-cloud
 ```
