@@ -2,6 +2,7 @@ pub mod data;
 pub mod wait_framework;
 
 use std::i64;
+use std::pin::Pin;
 
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::Page;
@@ -276,7 +277,14 @@ impl WebClient {
         }
 
         // Confirm where we landed
-        let actual_url = page.evaluate("window.location.href").await.unwrap();
+        // let actual_url = page.evaluate("window.location.href").await.unwrap();
+        let actual_url = evaluate(
+            &page,
+            "window.location.href",
+            0,
+            3,
+        ).await;
+        let actual_url = actual_url.unwrap();
         let actual_url = actual_url.value().unwrap().as_str().unwrap_or("").to_string();
 
         if actual_url != requested_url {
@@ -294,3 +302,25 @@ impl WebClient {
     }
 }
 
+fn evaluate<'a>(
+    page: &'a chromiumoxide::Page,
+    expression: &'a str,
+    counter: usize,
+    limit: usize,
+) -> Pin<Box<dyn Future<Output = Result<chromiumoxide::js::EvaluationResult, Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>> {
+    Box::pin(async move {
+        match page.evaluate(expression).await {
+            Ok(x) => Ok(x),
+            Err(err) => {
+                let err: Box<dyn std::error::Error + Send + Sync> = Box::new(err);
+                if counter < limit {
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    let result = evaluate(page, expression, counter, limit).await;
+                    result
+                } else {
+                    Err(err)
+                }
+            }
+        }
+    })
+}

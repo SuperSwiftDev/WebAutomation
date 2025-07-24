@@ -1675,6 +1675,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "web-automation-manifest"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "toml",
+]
+
+[[package]]
 name = "web-client-bot"
 version = "0.1.0"
 dependencies = [
@@ -1702,6 +1711,7 @@ dependencies = [
  "toml",
  "url",
  "walkdir",
+ "web-automation-manifest",
  "web-crawler-core",
 ]
 

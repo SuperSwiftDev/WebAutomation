@@ -18,4 +18,4 @@ indexmap = { version = "2.10.0", features = ['serde']}
 # web-compiler-xml-ast = { path = "../web-compiler-xml-ast" }
 
 web-crawler-core = { path = "../web-crawler-core" }
-
+web-automation-manifest = { path = "../web-automation-manifest" }

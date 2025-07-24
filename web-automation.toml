@@ -1,9 +1,7 @@
 [[projects]]
 id = "rsseau"
 seed_urls = ["https://rsseau.fr/en/"]
-whitelist.domains = ["rsseau.fr"]
 
 [[projects]]
 id = "spider-cloud"
 seed_urls = ["https://spider.cloud"]
-whitelist.domains = ["spider.cloud"]
