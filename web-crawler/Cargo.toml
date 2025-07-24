@@ -1,0 +1,21 @@
+[package]
+name = "web-crawler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.37", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"]}
+toml = "0.8.23"
+futures = "0.3"
+tokio = { version = "1.45.1", features = ["full"] }
+colored = "3.0.0"
+chrono = "0.4"
+url = { version = "2", features = ['serde']}
+walkdir = "2.5.0"
+indexmap = { version = "2.10.0", features = ['serde']}
+# web-compiler-xml-ast = { path = "../web-compiler-xml-ast" }
+
+web-crawler-core = { path = "../web-crawler-core" }
+

@@ -1,7 +1,10 @@
 {
     "cSpell.words": [
+        "chromiumoxide",
+        "chrono",
         "codellama",
         "dbg",
+        "Deque",
         "DSL",
         "endfor",
         "fmt",
@@ -17,7 +20,9 @@
         "OCTO",
         "repr",
         "reqwest",
+        "rsseau",
         "serde",
-        "Vec"
+        "Vec",
+        "walkdir"
     ]
 }

@@ -1,4 +1,4 @@
 [workspace]
-members = ["super-html-ast", "xml-ai", "xml-ai-core", "super-ai-client"]
+members = ["web-client-bot", "web-crawler", "web-crawler-core"]
 
 resolver = "3"  # Use resolver version 3 (recommended for edition 2021/2024)
