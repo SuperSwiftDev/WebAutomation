@@ -14,7 +14,7 @@ impl Link {
         serde_json::from_str::<Vec<Link>>(source.as_ref())
     }
     pub async fn scrape_all(page: &chromiumoxide::Page) -> Result<Vec<Link>, serde_json::Error> {
-        let result = crate::retry::retry_async(
+        let result = crate::utils::retry_async(
             || async {
                 page
                     .evaluate(SCRAPE_ANCHORS)

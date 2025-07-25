@@ -94,13 +94,13 @@ impl WebCrawler {
                     return false
                 }
                 SkipUrlReason::FailedFilter(FailedFilterReason::FailedWhitelistedSchemeCheck) => {
-                    format!("ⓘ Skipping [failed-whitelisted-scheme-check] {:?}", url.to_string())
+                    format!("\t ⓘ Skipping [failed-whitelisted-scheme-check] {:?}", url.to_string())
                 }
                 SkipUrlReason::FailedFilter(FailedFilterReason::FailedWhitelistedDomainCheck) => {
-                    format!("ⓘ Skipping [failed-whitelisted-domain-check] {:?}", url.to_string())
+                    format!("\t ⓘ Skipping [failed-whitelisted-domain-check] {:?}", url.to_string())
                 }
                 SkipUrlReason::FailedFilter(FailedFilterReason::IsBlacklistedScheme) => {
-                    format!("ⓘ Skipping [is-blacklisted-scheme] {:?}", url.to_string())
+                    format!("\t ⓘ Skipping [is-blacklisted-scheme] {:?}", url.to_string())
                 }
             };
             eprintln!("{}", msg.cyan());
@@ -123,7 +123,7 @@ impl WebCrawler {
         let status_code = tab.status_code();
         if status_code.is_none() {
             eprintln!("{}", format!(
-                "\tSkipping {:?} » status: {status_code:?}",
+                "\t Skipping {:?} » status: {status_code:?}",
                 url.to_string(),
             ).bright_red());
             let entry = VisitedPage::Failure {
@@ -136,7 +136,7 @@ impl WebCrawler {
         }
         if status_code != Some(200) {
             eprintln!("{}", format!(
-                "\tError {:?} » status: {status_code:?}",
+                "\t Error {:?} » status: {status_code:?}",
                 url.to_string(),
             ).red());
             let entry = VisitedPage::Failure {
@@ -150,9 +150,19 @@ impl WebCrawler {
         // - -
         // let _ = tokio::time::sleep(Duration::from_secs(3)).await;
         // - -
-        tab.wait_for_navigation().await;
+        let _ = web_client_bot::utils::retry_on_timeout(
+            "wait_for_navigation",
+            || async {
+                let result = tab.wait_for_navigation().await;
+                let result: Result<_, Box<dyn std::error::Error + Send + Sync>> = Ok(result);
+                result
+            },
+            1,
+            std::time::Duration::from_secs(1),
+            std::time::Duration::from_secs(5),
+        ).await; // IGNORE POSSIBLE TIMEOUT ERRORS
+        // tab.wait_for_navigation().await;
         // - -
-
         let actual_url = {
             let url = get_actual_url(&tab, 0, 3).await.unwrap();
             Url::from_str(&url).unwrap()
@@ -171,7 +181,7 @@ impl WebCrawler {
             Ok(true) => (),
             Ok(false) => {
                 eprintln!("{}", format!(
-                    "ⓘ Skipping {:?} : NOT HTML DOCUMENT",
+                    "\t ⓘ Skipping {:?} : NOT HTML DOCUMENT",
                     url.to_string()
                 ).red());
                 tab.close().await;
@@ -179,20 +189,29 @@ impl WebCrawler {
             },
             Err(error) => {
                 eprintln!("{}", format!(
-                    "ⓘ Skipping {:?} : ERROR CHECKING FOR HTML DOCUMENT : {error}",
+                    "\t ⓘ Skipping {:?} : ERROR CHECKING FOR HTML DOCUMENT : {error}",
                     url.to_string()
                 ).red());
                 tab.close().await;
                 return
             }
         };
-        if let Err(e) = tab.wait_until_fully_settled().await {
-            eprint!("{}", format!(
-                "❌ Failed to settle: {} | {e}",
+        let maybe_fully_settled = web_client_bot::utils::retry_on_timeout(
+            "wait_until_fully_settled",
+            || async {
+                tab .wait_until_fully_settled()
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+            },
+            1,
+            std::time::Duration::from_secs(1),
+            std::time::Duration::from_secs(5),
+        ).await;
+        if let Err(error) = maybe_fully_settled {
+            eprintln!("{}", format!(
+                "\t ❌ Failed to settle: {:?} » {error}",
                 url.as_str()
             ).red());
-            tab.close().await;
-            return
         }
         // - DOM SNAPSHOT -
         let html = tab.html_content().await;
@@ -203,7 +222,7 @@ impl WebCrawler {
                 match Url::from_str(&link.href) {
                     Err(error) => {
                         eprintln!("{}", format!(
-                            "ⓘ Skipping {:?} : {error}",
+                            "\t ⓘ Skipping {:?} : {error}",
                             link.href,
                         ));
                         None

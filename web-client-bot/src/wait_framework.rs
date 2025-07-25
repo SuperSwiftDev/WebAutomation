@@ -31,7 +31,7 @@ impl Default for WaitOptions {
 // ======================= WaitCondition Trait ==================
 #[async_trait]
 pub trait WaitCondition: Send + Sync {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error>>;
+    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Optional: Cleanup after the condition has finished (default: no-op)
     async fn cleanup(&self, _tab: &WebClientTab) {}
@@ -44,7 +44,7 @@ pub struct DomReady;
 
 #[async_trait]
 impl WaitCondition for DomReady {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error>> {
+    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let expr = "document.readyState === 'complete'";
         let result = tab.evaluate(expr).await?.as_bool().unwrap_or(false);
         Ok(result)
@@ -100,7 +100,7 @@ impl NetworkIdle {
 
 #[async_trait]
 impl WaitCondition for NetworkIdle {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error>> {
+    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let js = format!(
             r#"
             (() => {{
@@ -161,7 +161,7 @@ pub struct FetchIdle;
 
 #[async_trait]
 impl WaitCondition for FetchIdle {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error>> {
+    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let js = r#"
         (() => {
             const ns = '__chromiumoxide_internal';
@@ -225,7 +225,7 @@ pub struct All(pub Vec<Box<dyn WaitCondition>>);
 
 #[async_trait]
 impl WaitCondition for All {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error>> {
+    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         for cond in &self.0 {
             if !cond.is_satisfied(tab).await? {
                 return Ok(false);
@@ -239,7 +239,7 @@ pub struct Any(pub Vec<Box<dyn WaitCondition>>);
 
 #[async_trait]
 impl WaitCondition for Any {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error>> {
+    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         for cond in &self.0 {
             if cond.is_satisfied(tab).await? {
                 return Ok(true);
@@ -286,7 +286,7 @@ impl WaitRunner {
             let condition_is_satisfied = condition
                 .is_satisfied(tab)
                 .await
-                .map_err(WaitError::Other)?;
+                .map_err(|error| WaitError::Other(error))?;
             if condition_is_satisfied {
                 condition.cleanup(tab).await;
                 return Ok(());
@@ -306,7 +306,7 @@ impl WaitRunner {
 #[derive(Debug)]
 pub enum WaitError {
     Timeout(Duration),
-    Other(Box<dyn std::error::Error>)
+    Other(Box<dyn std::error::Error + Send + Sync>),
     // EvaluationFailed(String),
     // UnexpectedJsResult,
 }
@@ -336,7 +336,7 @@ impl std::error::Error for WaitError {}
 
 impl WebClientTab {
     /// Evaluate JS in the page context
-    pub async fn evaluate(&self, js_expr: &str) -> Result<Value, Box<dyn std::error::Error>> {
+    pub async fn evaluate(&self, js_expr: &str) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
         let eval = EvaluateParams::builder()
             .expression(js_expr)
             .return_by_value(true)

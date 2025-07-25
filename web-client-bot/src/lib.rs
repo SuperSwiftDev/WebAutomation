@@ -1,6 +1,6 @@
 pub mod data;
 pub mod wait_framework;
-pub mod retry;
+pub mod utils;
 
 use std::i64;
 // use std::pin::Pin;
@@ -188,7 +188,7 @@ impl WebClientTab {
     pub async fn close(self) {
         self.page.close().await.unwrap()
     }
-    pub async fn is_text_html_document(&self) -> Result<bool, Box<dyn std::error::Error>> {
+    pub async fn is_text_html_document(&self) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let js = "document.contentType";
         let value = self.evaluate(js).await?;
     
@@ -234,7 +234,7 @@ impl WebClient {
 
         // Start navigation, and allow it to fail without panic
         // let nav_result = page.goto(&requested_url).await;
-        let nav_result = retry::retry_async(
+        let nav_result = utils::retry_async(
             || async {
                 page.goto(&requested_url)
                     .await
@@ -290,7 +290,7 @@ impl WebClient {
         }
 
         // Confirm where we landed
-        let actual_url = crate::retry::retry_async(
+        let actual_url = crate::utils::retry_async(
             || async {
                 page.evaluate("window.location.href")
                     .await
