@@ -3,7 +3,9 @@ use std::str::FromStr;
 
 use indexmap::IndexSet;
 use url::Url;
-use web_crawler_core::{settings::{FileSystemPaths, UrlVisitorSettings}, CrawlerSettings, WebCrawler};
+use web_crawler_core::engine::{CrawlerSettings, WebCrawler};
+use web_crawler_core::settings::UrlVisitorSettings;
+// use web_crawler_core::{settings::{FileSystemPaths, UrlVisitorSettings}, CrawlerSettings, WebCrawler};
 
 pub mod cli;
 
@@ -32,21 +34,43 @@ pub async fn evaluate(file_path: impl AsRef<Path>, project_id: &str) {
 
 pub async fn run(seed_urls: impl IntoIterator<Item=Url>, id: &str) {
     let seed_urls = seed_urls.into_iter().collect::<Vec<_>>();
-    let snapshot_directory = PathBuf::from(".web-crawler").join(id);
-    let manifest_path = snapshot_directory.join("manifest.toml");
+    let project_directory = PathBuf::from(".output").join(id);
+    // let manifest_path = snapshot_directory.join("manifest.toml");
     let url_visitor_settings = UrlVisitorSettings::from_seed_urls_with_defaults(&seed_urls);
     let crawler_settings = CrawlerSettings {
         seed_urls: IndexSet::from_iter(seed_urls),
         url_visitor_settings,
-        file_system_paths: FileSystemPaths {
-            snapshot_directory,
-            manifest_path,
-        },
+        project_directory,
     };
     let mut web_crawler = WebCrawler::new(crawler_settings);
     web_crawler.execute().await;
-    let (crawler_settings, snapshot_manifest) = web_crawler.finalize();
-    // - TODO -
+    let (crawler_settings, project_log) = web_crawler.finalize();
+    // // - TODO -
     let _ = crawler_settings;
-    let _ = snapshot_manifest;
+    let _ = project_log;
 }
+
+
+
+
+
+// pub async fn run(seed_urls: impl IntoIterator<Item=Url>, id: &str) {
+//     let seed_urls = seed_urls.into_iter().collect::<Vec<_>>();
+//     let snapshot_directory = PathBuf::from(".web-crawler").join(id);
+//     let manifest_path = snapshot_directory.join("manifest.toml");
+//     let url_visitor_settings = UrlVisitorSettings::from_seed_urls_with_defaults(&seed_urls);
+//     let crawler_settings = CrawlerSettings {
+//         seed_urls: IndexSet::from_iter(seed_urls),
+//         url_visitor_settings,
+//         file_system_paths: FileSystemPaths {
+//             snapshot_directory,
+//             manifest_path,
+//         },
+//     };
+//     let mut web_crawler = WebCrawler::new(crawler_settings);
+//     web_crawler.execute().await;
+//     let (crawler_settings, snapshot_manifest) = web_crawler.finalize();
+//     // - TODO -
+//     let _ = crawler_settings;
+//     let _ = snapshot_manifest;
+// }

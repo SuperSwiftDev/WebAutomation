@@ -123,22 +123,22 @@ impl UrlVisitorSettings {
 pub struct CrawlerSettings {
     pub seed_urls: IndexSet<Url>,
     pub url_visitor_settings: UrlVisitorSettings,
-    pub file_system_paths: FileSystemPaths,
+    pub project_directory: PathBuf,
 }
 
-#[derive(Debug, Clone)]
-pub struct FileSystemPaths {
-    pub snapshot_directory: PathBuf,
-    pub manifest_path: PathBuf,
-}
+// #[derive(Debug, Clone)]
+// pub struct FileSystemPaths {
+//     pub snapshot_directory: PathBuf,
+//     pub manifest_path: PathBuf,
+// }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SkipUrlReason {
     AlreadyVisited,
     FailedFilter(FailedFilterReason),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FailedFilterReason {
     FailedWhitelistedSchemeCheck,
     FailedWhitelistedDomainCheck,

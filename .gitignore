@@ -62,3 +62,5 @@ out-old/
 
 web-crawler.private.toml
 web-automation.private.toml
+
+/.output

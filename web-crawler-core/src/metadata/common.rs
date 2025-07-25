@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -75,6 +75,42 @@ impl<'de> Deserialize<'de> for RelativeFilePath {
             .strip_prefix("file://./")
             .ok_or_else(|| serde::de::Error::custom("Expected 'file://./' prefix"))?;
         Ok(RelativeFilePath(PathBuf::from(stripped)))
+    }
+}
+
+// ————————————————————————————————————————————————————————————————————————————
+// STATUS
+// ————————————————————————————————————————————————————————————————————————————
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Status {
+    Success { url: OriginalUrl, http_status: Option<i64> },
+    Failure { url: OriginalUrl, http_status: Option<i64> },
+    Redirected { from: OriginalUrl, to: OriginalUrl, http_status: Option<i64> },
+}
+
+// ————————————————————————————————————————————————————————————————————————————
+// INTERNAL — NEWTYPES
+// ————————————————————————————————————————————————————————————————————————————
+
+pub struct SnapshotDirectory(pub PathBuf);
+
+impl SnapshotDirectory {
+    pub fn join(&self, path: impl AsRef<Path>) -> PathBuf {
+        self.0.join(path)
+    }
+}
+
+impl From<PathBuf> for SnapshotDirectory {
+    fn from(value: PathBuf) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&Path> for SnapshotDirectory {
+    fn from(value: &Path) -> Self {
+        Self(value.to_path_buf())
     }
 }
 

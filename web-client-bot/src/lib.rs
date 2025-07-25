@@ -108,7 +108,7 @@ impl WebClient {
 
 
 impl WebClient {
-    pub async fn open_new_tab_at_url(&mut self, url: impl AsRef<str>) -> WebClientTab {
+    pub async fn open_new_tab_at_url(&mut self, url: impl AsRef<str>) -> LiveWebpage {
         let requested_url = url.as_ref().to_string();
 
         let page = self.browser.new_page(requested_url.clone()).await.unwrap();
@@ -128,7 +128,7 @@ impl WebClient {
             }
         }
 
-        WebClientTab { page, status_code: None }
+        LiveWebpage { page, status_code: None }
     }
 }
 
@@ -161,12 +161,12 @@ impl WebClient {
 // —— WEB CLIENT TAB ——————————————————————————————————————————————————————————
 
 #[derive(Debug)]
-pub struct WebClientTab {
+pub struct LiveWebpage {
     page: Page,
     status_code: Option<i64>,
 }
 
-impl WebClientTab {
+impl LiveWebpage {
     /// This resolves once the navigation finished and the page is loaded.
     pub async fn wait_for_navigation(&self) {
         let _ = self.page.wait_for_navigation().await.unwrap();
@@ -212,7 +212,7 @@ impl WebClient {
     pub async fn open_new_tab_at_url_with_network_tracking(
         &mut self,
         url: impl AsRef<str>,
-    ) -> WebClientTab {
+    ) -> LiveWebpage {
         use chromiumoxide::cdp::browser_protocol::network::{EnableParams, EventResponseReceived, ResourceType};
         use futures::StreamExt;
 
@@ -316,7 +316,7 @@ impl WebClient {
             ).cyan());
         }
 
-        WebClientTab {
+        LiveWebpage {
             page,
             status_code,
         }

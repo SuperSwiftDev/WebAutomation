@@ -4,7 +4,7 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::common::{CanonicalUrl, OriginalUrl, RelativeFilePath, SnapshotDate};
+use crate::metadata::common::{CanonicalUrl, OriginalUrl, RelativeFilePath, SnapshotDate};
 
 // ————————————————————————————————————————————————————————————————————————————
 // HELPERS

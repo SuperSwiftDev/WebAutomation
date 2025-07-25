@@ -10,7 +10,7 @@ use std::time::Duration;
 use chromiumoxide::cdp::js_protocol::runtime::EvaluateParams;
 use serde_json::Value;
 
-use crate::WebClientTab;
+use crate::LiveWebpage;
 
 // ======================= WaitOptions ==========================
 #[derive(Debug, Clone)]
@@ -31,10 +31,10 @@ impl Default for WaitOptions {
 // ======================= WaitCondition Trait ==================
 #[async_trait]
 pub trait WaitCondition: Send + Sync {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
+    async fn is_satisfied(&self, tab: &LiveWebpage) -> Result<bool, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Optional: Cleanup after the condition has finished (default: no-op)
-    async fn cleanup(&self, _tab: &WebClientTab) {}
+    async fn cleanup(&self, _tab: &LiveWebpage) {}
 }
 
 // ======================= Built-In Conditions ==================
@@ -44,7 +44,7 @@ pub struct DomReady;
 
 #[async_trait]
 impl WaitCondition for DomReady {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    async fn is_satisfied(&self, tab: &LiveWebpage) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let expr = "document.readyState === 'complete'";
         let result = tab.evaluate(expr).await?.as_bool().unwrap_or(false);
         Ok(result)
@@ -100,7 +100,7 @@ impl NetworkIdle {
 
 #[async_trait]
 impl WaitCondition for NetworkIdle {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    async fn is_satisfied(&self, tab: &LiveWebpage) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let js = format!(
             r#"
             (() => {{
@@ -161,7 +161,7 @@ pub struct FetchIdle;
 
 #[async_trait]
 impl WaitCondition for FetchIdle {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    async fn is_satisfied(&self, tab: &LiveWebpage) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let js = r#"
         (() => {
             const ns = '__chromiumoxide_internal';
@@ -197,7 +197,7 @@ impl WaitCondition for FetchIdle {
         Ok(result)
     }
 
-    async fn cleanup(&self, tab: &WebClientTab) {
+    async fn cleanup(&self, tab: &LiveWebpage) {
         let js = r#"
         (() => {
             const ns = '__chromiumoxide_internal';
@@ -225,7 +225,7 @@ pub struct All(pub Vec<Box<dyn WaitCondition>>);
 
 #[async_trait]
 impl WaitCondition for All {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    async fn is_satisfied(&self, tab: &LiveWebpage) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         for cond in &self.0 {
             if !cond.is_satisfied(tab).await? {
                 return Ok(false);
@@ -239,7 +239,7 @@ pub struct Any(pub Vec<Box<dyn WaitCondition>>);
 
 #[async_trait]
 impl WaitCondition for Any {
-    async fn is_satisfied(&self, tab: &WebClientTab) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    async fn is_satisfied(&self, tab: &LiveWebpage) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         for cond in &self.0 {
             if cond.is_satisfied(tab).await? {
                 return Ok(true);
@@ -277,7 +277,7 @@ pub struct WaitRunner;
 impl WaitRunner {
     pub async fn run<C: WaitCondition>(
         condition: &C,
-        tab: &WebClientTab,
+        tab: &LiveWebpage,
         options: &WaitOptions,
     ) -> Result<(), WaitError> {
         let start = tokio::time::Instant::now();
@@ -334,7 +334,7 @@ impl std::error::Error for WaitError {}
 
 // ======================= WebClientTab Extension ===============
 
-impl WebClientTab {
+impl LiveWebpage {
     /// Evaluate JS in the page context
     pub async fn evaluate(&self, js_expr: &str) -> Result<Value, Box<dyn std::error::Error + Send + Sync>> {
         let eval = EvaluateParams::builder()
@@ -360,7 +360,7 @@ impl WebClientTab {
     }
 }
 
-impl WebClientTab {
+impl LiveWebpage {
     /// General-purpose wait heuristic for arbitrary pages:
     /// - Waits for DOM ready
     /// - Waits for JS network (fetch/XHR) idle

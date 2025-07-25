@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use url::Url;
 
-use crate::common::RelativeFilePath;
+use crate::metadata::common::RelativeFilePath;
 
 const MAX_SEGMENT_LEN: usize = 100;
 const MAX_PATH_LEN: usize = 240;
