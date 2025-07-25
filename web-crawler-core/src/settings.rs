@@ -16,6 +16,7 @@ impl UrlVisitorSettings {
             domain_whitelist: domain_whitelist
                 .into_iter()
                 .map(|x| x.into())
+                .map(|x| x.to_ascii_lowercase())
                 .collect(),
             protocol_whitelist: Default::default(),
             protocol_blacklist: Default::default(),
@@ -71,10 +72,10 @@ impl UrlVisitorSettings {
     pub fn with_whitelisted_domain(mut self, entry: impl AsRef<str>) -> Self {
         match Url::from_str(entry.as_ref()) {
             Ok(url) => {
-                self.domain_whitelist.insert(url.domain().unwrap().to_string());
+                self.domain_whitelist.insert(url.domain().unwrap().to_ascii_lowercase().to_string());
             }
             Err(_) => {
-                self.domain_whitelist.insert(entry.as_ref().to_string());
+                self.domain_whitelist.insert(entry.as_ref().to_ascii_lowercase().to_string());
             }
         }
         self
@@ -111,7 +112,6 @@ impl UrlVisitorSettings {
             Some(d) => d.to_ascii_lowercase(),
             None => return false,
         };
-    
         self.domain_whitelist.iter().any(|allowed| {
             let allowed = allowed.to_ascii_lowercase();
             url_domain == allowed || url_domain.ends_with(&format!(".{}", allowed))

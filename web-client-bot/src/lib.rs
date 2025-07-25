@@ -240,7 +240,7 @@ impl WebClient {
                     .await
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
             },
-            3,
+            2,
             std::time::Duration::from_secs(3),
         ).await;
         if let Err(err) = nav_result {

@@ -1,13 +1,16 @@
 [[projects]]
 id = "rsseau"
+namespace = "default"
 seed_urls = ["https://rsseau.fr/en/"]
 
 [[projects]]
 id = "spider-cloud"
+namespace = "default"
 seed_urls = ["https://spider.cloud"]
 
 [[projects]]
 id = "battery"
+namespace = "default"
 seed_urls = [
     "https://spider.cloud",
     "https://rsseau.fr/en/",

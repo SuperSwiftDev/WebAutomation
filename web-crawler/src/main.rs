@@ -29,12 +29,13 @@ pub async fn evaluate(file_path: impl AsRef<Path>, project_id: &str) {
         .iter()
         .map(|x| Url::from_str(x).unwrap())
         .collect::<Vec<_>>();
-    run(seed_urls, project_id).await;
+    run(seed_urls, project_id, project.namespace.as_ref()).await;
 }
 
-pub async fn run(seed_urls: impl IntoIterator<Item=Url>, id: &str) {
+pub async fn run(seed_urls: impl IntoIterator<Item=Url>, id: &str, namespace: Option<&String>) {
     let seed_urls = seed_urls.into_iter().collect::<Vec<_>>();
-    let project_directory = PathBuf::from(".output").join(id);
+    let namespace = namespace.map(|x| x.as_str());
+    let project_directory = PathBuf::from(".output").join(namespace.unwrap_or(id));
     // let manifest_path = snapshot_directory.join("manifest.toml");
     let url_visitor_settings = UrlVisitorSettings::from_seed_urls_with_defaults(&seed_urls);
     let crawler_settings = CrawlerSettings {

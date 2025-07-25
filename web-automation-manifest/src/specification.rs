@@ -31,6 +31,8 @@ use serde::{Deserialize, Serialize};
 pub struct ProjectSpec {
     pub id: String,
     pub seed_urls: Vec<String>,
+    #[serde(default)]
+    pub namespace: Option<String>,
     // pub output_dir: PathBuf,
 }
 
