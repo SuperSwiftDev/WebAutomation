@@ -121,11 +121,24 @@ impl WebCrawler {
         // - -
         let tab = client.open_new_tab_at_url_with_network_tracking(canonical_url.0.as_str()).await;
         let status_code = tab.status_code();
+        if status_code.is_none() {
+            eprintln!("{}", format!(
+                "\tSkipping {:?} » status: {status_code:?}",
+                url.to_string(),
+            ).bright_red());
+            let entry = VisitedPage::Failure {
+                url: url.clone().into(),
+                http_status: status_code,
+            };
+            self.snapshot_manifest.visited_pages.insert(entry);
+            tab.close().await;
+            return
+        }
         if status_code != Some(200) {
             eprintln!("{}", format!(
-                "❌ Skipping {:?} : Request failed STATUS={status_code:?}",
+                "\tError {:?} » status: {status_code:?}",
                 url.to_string(),
-            ));
+            ).red());
             let entry = VisitedPage::Failure {
                 url: url.clone().into(),
                 http_status: status_code,
@@ -139,6 +152,7 @@ impl WebCrawler {
         // - -
         tab.wait_for_navigation().await;
         // - -
+
         let actual_url = {
             let url = get_actual_url(&tab, 0, 3).await.unwrap();
             Url::from_str(&url).unwrap()
@@ -209,7 +223,7 @@ impl WebCrawler {
             self.queue.push_back(next.clone());
         }
         // - FINALIZE -
-        let relative_snapshot_path = crate::utils::build_rel_html_snapshot_file_path(url.as_str()).unwrap();
+        let relative_snapshot_path = crate::path_utils::build_rel_html_snapshot_file_path(url.as_str()).unwrap();
         let out_file_path = self.crawler_settings.file_system_paths.snapshot_directory.join(&relative_snapshot_path.0);
         let outgoing_links = outgoing_anchors
             .iter()

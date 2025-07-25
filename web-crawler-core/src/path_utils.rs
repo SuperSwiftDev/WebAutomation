@@ -14,9 +14,10 @@ const MAX_PATH_LEN: usize = 240;
 /// Regarding the parent directory — falls back to hashed folder if path becomes too long or unsafe.
 pub fn build_rel_html_snapshot_file_path(url: &str) -> Option<RelativeFilePath> {
     Some(RelativeFilePath(build_rel_html_snapshot_dir(url).map(|base| {
-        base.join("snapshot.html")
+        base.join("source.snapshot.html")
     })?))
 }
+
 /// Build directory path for a given URL, including query parameters.
 /// Falls back to hashed folder if path becomes too long or unsafe.
 pub fn build_rel_html_snapshot_dir(url: &str) -> Option<PathBuf> {

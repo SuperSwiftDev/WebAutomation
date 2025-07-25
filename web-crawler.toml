@@ -5,3 +5,10 @@ seed_urls = ["https://rsseau.fr/en/"]
 [[projects]]
 id = "spider-cloud"
 seed_urls = ["https://spider.cloud"]
+
+[[projects]]
+id = "battery"
+seed_urls = [
+    "https://spider.cloud",
+    "https://rsseau.fr/en/",
+]

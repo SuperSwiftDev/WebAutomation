@@ -1,8 +1,9 @@
 pub mod data;
 pub mod wait_framework;
+pub mod retry;
 
 use std::i64;
-use std::pin::Pin;
+// use std::pin::Pin;
 
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::Page;
@@ -220,6 +221,8 @@ impl WebClient {
         // Create a new blank page
         let page = self.browser.new_page("about:blank").await.unwrap();
 
+        page.enable_stealth_mode().await.unwrap();
+
         // Get the main frame ID (used to identify top-level responses)
         let main_frame_id = page.mainframe().await.unwrap().unwrap();
 
@@ -230,9 +233,19 @@ impl WebClient {
         let mut responses = page.event_listener::<EventResponseReceived>().await.unwrap();
 
         // Start navigation, and allow it to fail without panic
-        let nav_result = page.goto(&requested_url).await;
+        // let nav_result = page.goto(&requested_url).await;
+        let nav_result = retry::retry_async(
+            || async {
+                page.goto(&requested_url)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+            },
+            3,
+            std::time::Duration::from_secs(3),
+        ).await;
         if let Err(err) = nav_result {
             eprintln!("⚠️ Navigation to {requested_url:?} failed: {err} — continuing anyway.");
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
 
         // Try `wait_for_navigation`, but fallback if needed
@@ -277,13 +290,21 @@ impl WebClient {
         }
 
         // Confirm where we landed
-        // let actual_url = page.evaluate("window.location.href").await.unwrap();
-        let actual_url = evaluate(
-            &page,
-            "window.location.href",
-            0,
+        let actual_url = crate::retry::retry_async(
+            || async {
+                page.evaluate("window.location.href")
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+            },
             3,
+            std::time::Duration::from_secs(1),
         ).await;
+        // let actual_url = evaluate(
+        //     &page,
+        //     "window.location.href",
+        //     0,
+        //     3,
+        // ).await;
         let actual_url = actual_url.unwrap();
         let actual_url = actual_url.value().unwrap().as_str().unwrap_or("").to_string();
 
@@ -302,25 +323,25 @@ impl WebClient {
     }
 }
 
-fn evaluate<'a>(
-    page: &'a chromiumoxide::Page,
-    expression: &'a str,
-    counter: usize,
-    limit: usize,
-) -> Pin<Box<dyn Future<Output = Result<chromiumoxide::js::EvaluationResult, Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>> {
-    Box::pin(async move {
-        match page.evaluate(expression).await {
-            Ok(x) => Ok(x),
-            Err(err) => {
-                let err: Box<dyn std::error::Error + Send + Sync> = Box::new(err);
-                if counter < limit {
-                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                    let result = evaluate(page, expression, counter, limit).await;
-                    result
-                } else {
-                    Err(err)
-                }
-            }
-        }
-    })
-}
+// fn evaluate<'a>(
+//     page: &'a chromiumoxide::Page,
+//     expression: &'a str,
+//     counter: usize,
+//     limit: usize,
+// ) -> Pin<Box<dyn Future<Output = Result<chromiumoxide::js::EvaluationResult, Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>> {
+//     Box::pin(async move {
+//         match page.evaluate(expression).await {
+//             Ok(x) => Ok(x),
+//             Err(err) => {
+//                 let err: Box<dyn std::error::Error + Send + Sync> = Box::new(err);
+//                 if counter < limit {
+//                     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+//                     let result = evaluate(page, expression, counter + 1, limit).await;
+//                     result
+//                 } else {
+//                     Err(err)
+//                 }
+//             }
+//         }
+//     })
+// }
