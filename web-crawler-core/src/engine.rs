@@ -219,10 +219,10 @@ impl WebCrawler {
             // - -
             if should_terminate {
                 self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
-                tab.close().await;
                 self.fully_resolved.insert(url.to_owned());
                 self.fully_resolved.insert(canonical_url.0.clone());
                 // - TERMINATE -
+                tab.close().await;
                 return
             }
         }
@@ -268,7 +268,6 @@ impl WebCrawler {
                         "\t ⓘ Skipping {:?} : NOT HTML DOCUMENT",
                         url.to_string()
                     ).red());
-                    tab.close().await;
                     // - UPDATE -
                     self.fully_resolved.insert(url.to_owned());
                     self.fully_resolved.insert(canonical_url.0.clone());
@@ -278,6 +277,7 @@ impl WebCrawler {
                     });
                     self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
                     // - TERMINATE -
+                    tab.close().await;
                     return
                 },
                 Ok(Err(error)) => {
@@ -285,7 +285,6 @@ impl WebCrawler {
                         "\t ⓘ Skipping {:?} : ERROR CHECKING FOR HTML DOCUMENT : {error}",
                         url.to_string()
                     ).red());
-                    tab.close().await;
                     // - UPDATE -
                     self.fully_resolved.insert(url.to_owned());
                     self.fully_resolved.insert(canonical_url.0.clone());
@@ -295,6 +294,7 @@ impl WebCrawler {
                     });
                     self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
                     // - TERMINATE -
+                    tab.close().await;
                     return
                 }
                 Err(timeout_error) => {
@@ -302,43 +302,6 @@ impl WebCrawler {
                 }
             }
         }
-        // match tab.is_text_html_document().await {
-        //     Ok(true) => (),
-        //     Ok(false) => {
-        //         eprintln!("{}", format!(
-        //             "\t ⓘ Skipping {:?} : NOT HTML DOCUMENT",
-        //             url.to_string()
-        //         ).red());
-        //         tab.close().await;
-        //         // - UPDATE -
-        //         self.fully_resolved.insert(url.to_owned());
-        //         self.fully_resolved.insert(canonical_url.0.clone());
-        //         task_log.entries.push(Status::Failure {
-        //             url: OriginalUrl(url.clone()),
-        //             http_status: status_code,
-        //         });
-        //         self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
-        //         // - TERMINATE -
-        //         return
-        //     },
-        //     Err(error) => {
-        //         eprintln!("{}", format!(
-        //             "\t ⓘ Skipping {:?} : ERROR CHECKING FOR HTML DOCUMENT : {error}",
-        //             url.to_string()
-        //         ).red());
-        //         tab.close().await;
-        //         // - UPDATE -
-        //         self.fully_resolved.insert(url.to_owned());
-        //         self.fully_resolved.insert(canonical_url.0.clone());
-        //         task_log.entries.push(Status::Failure {
-        //             url: OriginalUrl(url.clone()),
-        //             http_status: status_code,
-        //         });
-        //         self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
-        //         // - TERMINATE -
-        //         return
-        //     }
-        // };
         {
             let maybe_fully_settled = web_client_bot::utils::retry_on_timeout(
                 "wait_until_fully_settled",
