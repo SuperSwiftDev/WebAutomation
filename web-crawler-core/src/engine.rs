@@ -195,10 +195,8 @@ impl WebCrawler {
             }
         }
         eprintln!("{}", format!("🔎 Visiting: {}", canonical_url.0).bright_magenta());
-        eprintln!("{}", format!("\t 1. TODO").bright_yellow());
         // - -
         let tab = client.open_new_tab_at_url_with_network_tracking(canonical_url.0.as_str()).await;
-        eprintln!("{}", format!("\t 2. TODO").bright_yellow());
         let status_code = tab.status_code();
         if status_code != Some(200) {
             let should_terminate = status_code.is_none();
@@ -229,7 +227,6 @@ impl WebCrawler {
             }
         }
         // - -
-        eprintln!("{}", format!("\t 3. TODO").bright_yellow());
         // {
         //     let _ = web_client_bot::utils::with_timeout(
         //         tab.wait_for_navigation(),
@@ -237,7 +234,6 @@ impl WebCrawler {
         //     ).await; // IGNORE POSSIBLE TIMEOUT ERRORS
         // }
         // - -
-        eprintln!("{}", format!("\t 4. TODO").bright_yellow());
         let actual_url = {
             let url = web_client_bot::utils::retry_async(
                 || async {
@@ -257,7 +253,6 @@ impl WebCrawler {
                 http_status: status_code,
             });
         }
-        eprintln!("{}", format!("\t 5. TODO").bright_yellow());
         // - -
         {
             let result = web_client_bot::utils::with_timeout_lazy(
@@ -344,7 +339,6 @@ impl WebCrawler {
         //         return
         //     }
         // };
-        eprintln!("{}", format!("\t 6. TODO").bright_yellow());
         {
             let maybe_fully_settled = web_client_bot::utils::retry_on_timeout(
                 "wait_until_fully_settled",
@@ -365,9 +359,7 @@ impl WebCrawler {
             }
         }
         // - DOM SNAPSHOT -
-        eprintln!("{}", format!("\t 7. TODO").bright_yellow());
         let html = tab.html_content().await;
-        eprintln!("{}", format!("\t 8. TODO").bright_yellow());
         let outgoing_anchors_links = tab.scrape_all_anchor_links().await.unwrap();
         let outgoing_anchors = outgoing_anchors_links
             .iter()
@@ -421,7 +413,6 @@ impl WebCrawler {
             self.fully_resolved.insert(url.to_owned());
             self.fully_resolved.insert(canonical_url.0.clone());
         }
-        eprintln!("{}", format!("\t 9. TODO").bright_yellow());
         // - CLOSE -
         tab.close().await;
     }
