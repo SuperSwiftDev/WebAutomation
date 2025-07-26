@@ -38,72 +38,7 @@ impl WebClient {
     pub async fn close(mut self) {
         let _ = self.browser.close().await.unwrap();
     }
-    // pub async fn open_new_tab_at_url(&mut self, url: impl AsRef<str>) -> WebClientTab {
-    //     let url = url.as_ref();
-    //     let page = self.browser.new_page(url).await.unwrap();
-    //     WebClientTab { page }
-    // }
-    // pub async fn open_new_tab(&mut self, open: impl Into<OpenRequest>) -> WebClientTab {
-    //     let open = open.into();
-    //     let page = self.browser.new_page(open).await.unwrap();
-    //     WebClientTab { page }
-    // }
 }
-
-
-
-// impl WebClient {
-//     pub async fn open_new_tab_at_url(&mut self, url: impl AsRef<str>) -> WebClientTab {
-//         let original_url = url.as_ref().to_string();
-//         let mut current_url = url.as_ref().to_string();
-//         let max_redirects = 10;
-//         let mut redirects_followed = 0;
-
-//         loop {
-//             // Create a new page for each request
-//             let page = self.browser.new_page(current_url.clone()).await.unwrap();
-
-//             // Wait for the navigation event to complete
-//             page.wait_for_navigation().await.unwrap();
-
-//             // Get the final URL after potential redirects
-//             let final_url = page.url().await.unwrap_or(None);
-
-//             // If final_url is Some and different from current_url, follow redirect
-//             if let Some(ref new_url) = final_url {
-//                 if new_url != &current_url {
-//                     redirects_followed += 1;
-//                     if redirects_followed >= max_redirects {
-//                         panic!("Too many redirects for URL: {}", url.as_ref());
-//                     }
-
-//                     // Close the old tab before continuing
-//                     page.close().await.unwrap();
-
-//                     current_url = new_url.clone();
-//                     continue;
-//                 }
-
-//                 if redirects_followed != 0 {
-//                     eprintln!("ⓘ Redirected {original_url:?} => {current_url:?}");
-//                 }
-
-//                 // No redirect occurred, return the loaded tab
-//                 return WebClientTab { page };
-//             } else {
-//                 // Navigation failed or URL unavailable
-//                 panic!("Failed to retrieve final URL after navigation.");
-//             }
-//         }
-//     }
-// }
-
-
-// impl WebClient {
-//     pub async fn open_new_tab_at_url_follow_redirects(&mut self, url: impl AsRef<str>) -> WebClientTab {
-//         unimplemented!("TODO")
-//     }
-// }
 
 
 
@@ -233,87 +168,116 @@ impl WebClient {
         let mut responses = page.event_listener::<EventResponseReceived>().await.unwrap();
 
         // Start navigation, and allow it to fail without panic
-        // let nav_result = page.goto(&requested_url).await;
-        let nav_result = utils::retry_async(
-            || async {
-                page.goto(&requested_url)
-                    .await
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
-            },
-            2,
-            std::time::Duration::from_secs(3),
-        ).await;
-        if let Err(err) = nav_result {
-            eprintln!("⚠️ Navigation to {requested_url:?} failed: {err} — continuing anyway.");
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        {
+            let nav_result = crate::utils::with_timeout_lazy(
+                || async {
+                    utils::retry_async(
+                        || async {
+                            page.goto(&requested_url)
+                                .await
+                                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+                        },
+                        2,
+                        std::time::Duration::from_secs(3),
+                    ).await
+                },
+                std::time::Duration::from_secs(10),
+            ).await;
+            match nav_result {
+                Ok(Ok(_)) => (),
+                Ok(Err(error)) => {
+                    eprintln!("\t ⚠️ Navigation to {requested_url:?} failed: {error} — continuing anyway.");
+                }
+                Err(error) => {
+                    eprintln!("\t ⚠️ Navigation to {requested_url:?} failed: {error} — continuing anyway.");
+                }
+            }
         }
 
-        // Try `wait_for_navigation`, but fallback if needed
-        if let Err(err) = page.wait_for_navigation().await {
-            eprintln!("⚠️ wait_for_navigation failed: {err} — falling back to JS polling.");
-            loop {
-                let ready = page.evaluate("document.readyState").await.unwrap();
-                let state = ready.value().unwrap().as_str().unwrap_or("");
-                if state == "complete" || state == "interactive" {
-                    break;
+        {
+            let result = crate::utils::with_timeout_lazy(
+                || async {
+                    page.wait_for_navigation().await
+                },
+                std::time::Duration::from_secs(3),
+            ).await;
+            match result {
+                Ok(Ok(_)) => {}
+                Ok(Err(error)) => {
+                    eprintln!("\t ⚠️ `wait_for_navigation` failed: {error} — falling back to JS polling.");
+                    loop {
+                        let ready = page.evaluate("document.readyState").await.unwrap();
+                        let state = ready.value().unwrap().as_str().unwrap_or("");
+                        if state == "complete" || state == "interactive" {
+                            break;
+                        }
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    }
                 }
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                Err(error) => {
+                    eprintln!("\t ⚠️ `wait_for_navigation` failed: {error} — falling back to JS polling.");
+                    loop {
+                        let ready = page.evaluate("document.readyState").await.unwrap();
+                        let state = ready.value().unwrap().as_str().unwrap_or("");
+                        if state == "complete" || state == "interactive" {
+                            break;
+                        }
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    }
+                }
             }
         }
 
         // Extract the HTTP status code for the main document
         let mut status_code: Option<i64> = None;
-        let deadline = tokio::time::sleep(std::time::Duration::from_secs(5));
-        tokio::pin!(deadline);
+        {
+            let deadline = tokio::time::sleep(std::time::Duration::from_secs(5));
+            tokio::pin!(deadline);
 
-        loop {
-            tokio::select! {
-                Some(event) = responses.next() => {
-                    if event.r#type != ResourceType::Document {
-                        continue;
+            loop {
+                tokio::select! {
+                    Some(event) = responses.next() => {
+                        if event.r#type != ResourceType::Document {
+                            continue;
+                        }
+
+                        let frame_match = event.frame_id.as_ref() == Some(&main_frame_id);
+                        let url_match = event.response.url == requested_url
+                            || event.response.url.starts_with(&requested_url);
+
+                        if frame_match || url_match {
+                            status_code = Some(event.response.status);
+                            break;
+                        }
                     }
-
-                    let frame_match = event.frame_id.as_ref() == Some(&main_frame_id);
-                    let url_match = event.response.url == requested_url
-                        || event.response.url.starts_with(&requested_url);
-
-                    if frame_match || url_match {
-                        status_code = Some(event.response.status);
+                    _ = &mut deadline => {
+                        eprintln!("\t ⚠️ Timed out waiting for document response from {:?}", requested_url);
                         break;
                     }
-                }
-                _ = &mut deadline => {
-                    eprintln!("⚠️ Timed out waiting for document response from {:?}", requested_url);
-                    break;
                 }
             }
         }
 
         // Confirm where we landed
-        let actual_url = crate::utils::retry_async(
-            || async {
-                page.evaluate("window.location.href")
-                    .await
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
-            },
-            3,
-            std::time::Duration::from_secs(1),
-        ).await;
-        // let actual_url = evaluate(
-        //     &page,
-        //     "window.location.href",
-        //     0,
-        //     3,
-        // ).await;
-        let actual_url = actual_url.unwrap();
-        let actual_url = actual_url.value().unwrap().as_str().unwrap_or("").to_string();
-
-        if actual_url != requested_url {
-            eprintln!("{}", format!(
-                "ⓘ Redirected: {} => {}",
-                requested_url,
-                actual_url,
-            ).cyan());
+        {
+            let actual_url = crate::utils::retry_async(
+                || async {
+                    page.evaluate("window.location.href")
+                        .await
+                        .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+                },
+                3,
+                std::time::Duration::from_secs(1),
+            ).await;
+            let actual_url = actual_url.unwrap();
+            let actual_url = actual_url.value().unwrap().as_str().unwrap_or("").to_string();
+            if actual_url != requested_url {
+                eprintln!("{}", format!(
+                    "\t ⓘ Redirected: {} => {}",
+                    requested_url,
+                    actual_url,
+                ).cyan());
+            }
         }
 
         LiveWebpage {
@@ -322,26 +286,3 @@ impl WebClient {
         }
     }
 }
-
-// fn evaluate<'a>(
-//     page: &'a chromiumoxide::Page,
-//     expression: &'a str,
-//     counter: usize,
-//     limit: usize,
-// ) -> Pin<Box<dyn Future<Output = Result<chromiumoxide::js::EvaluationResult, Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>> {
-//     Box::pin(async move {
-//         match page.evaluate(expression).await {
-//             Ok(x) => Ok(x),
-//             Err(err) => {
-//                 let err: Box<dyn std::error::Error + Send + Sync> = Box::new(err);
-//                 if counter < limit {
-//                     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-//                     let result = evaluate(page, expression, counter + 1, limit).await;
-//                     result
-//                 } else {
-//                     Err(err)
-//                 }
-//             }
-//         }
-//     })
-// }

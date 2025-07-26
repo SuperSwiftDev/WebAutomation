@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::future::Future;
-// use std::pin::Pin;
 use std::time::Duration;
 use colored::Colorize;
 use tokio::time::sleep;
@@ -30,11 +29,6 @@ where
         }
     }
 }
-
-
-// use std::error::Error;
-// use std::future::Future;
-// use std::time::Duration;
 
 /// Retries the given async task only if it times out.
 /// Any other error is returned immediately.
@@ -70,6 +64,46 @@ where
     }
 }
 
+/// A general-purpose timeout wrapper. 
+/// Returns Ok(result) if successful in time, or a TimeoutError otherwise.
+pub async fn with_timeout<T, Fut>(
+    fut: Fut,
+    duration: Duration,
+) -> Result<T, TimeoutError>
+where
+    Fut: Future<Output = T> + Send,
+    T: Send + 'static,
+{
+    match timeout(duration, fut).await {
+        Ok(value) => Ok(value),
+        Err(_) => Err(TimeoutError(format!(
+            "operation exceeded timeout of {:?}",
+            duration
+        ))),
+    }
+}
+
+/// A general-purpose timeout wrapper. 
+/// Returns Ok(result) if successful in time, or a TimeoutError otherwise.
+pub async fn with_timeout_lazy<T, Fut, F>(
+    task: F,
+    duration: Duration,
+) -> Result<T, TimeoutError>
+where
+    Fut: Future<Output = T> + Send,
+    F: FnOnce() -> Fut,
+{
+    match timeout(duration, task()).await {
+        Ok(value) => Ok(value),
+        Err(_) => Err(TimeoutError(format!(
+            "operation exceeded timeout of {:?}",
+            duration
+        ))),
+    }
+}
+
+
+
 #[derive(Debug, Clone)]
 pub struct TimeoutError(pub String);
 impl std::fmt::Display for TimeoutError {
@@ -78,5 +112,4 @@ impl std::fmt::Display for TimeoutError {
     }
 }
 impl std::error::Error for TimeoutError {}
-
 

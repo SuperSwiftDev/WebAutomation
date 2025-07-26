@@ -1,7 +1,5 @@
 use std::collections::{HashSet, LinkedList};
 use std::path::PathBuf;
-use std::pin::Pin;
-use std::time::Duration;
 use std::{collections::VecDeque, str::FromStr};
 use indexmap::IndexSet;
 use url::Url;
@@ -22,26 +20,26 @@ pub struct WebCrawler {
     fully_resolved: HashSet<Url>,
 }
 
-fn get_actual_url<'a>(
-    tab: &'a web_client_bot::LiveWebpage,
-    counter: usize,
-    limit: usize,
-) -> Pin<Box<dyn Future<Output = Result<String, Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>> {
-    Box::pin(async move {
-        match tab.actual_url().await {
-            Ok(url) => Ok(url),
-            Err(err) => {
-                if counter < limit {
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                    let result = get_actual_url(tab, counter + 1, limit).await;
-                    result
-                } else {
-                    Err(err)
-                }
-            }
-        }
-    })
-}
+// fn get_actual_url<'a>(
+//     tab: &'a web_client_bot::LiveWebpage,
+//     counter: usize,
+//     limit: usize,
+// ) -> Pin<Box<dyn Future<Output = Result<String, Box<dyn std::error::Error + Send + Sync>>> + Send + 'a>> {
+//     Box::pin(async move {
+//         match tab.actual_url().await {
+//             Ok(url) => Ok(url),
+//             Err(err) => {
+//                 if counter < limit {
+//                     tokio::time::sleep(Duration::from_secs(1)).await;
+//                     let result = get_actual_url(tab, counter + 1, limit).await;
+//                     result
+//                 } else {
+//                     Err(err)
+//                 }
+//             }
+//         }
+//     })
+// }
 
 // ————————————————————————————————————————————————————————————————————————————
 // PUBLIC API
@@ -197,8 +195,10 @@ impl WebCrawler {
             }
         }
         eprintln!("{}", format!("🔎 Visiting: {}", canonical_url.0).bright_magenta());
+        eprintln!("{}", format!("\t 1. TODO").bright_yellow());
         // - -
         let tab = client.open_new_tab_at_url_with_network_tracking(canonical_url.0.as_str()).await;
+        eprintln!("{}", format!("\t 2. TODO").bright_yellow());
         let status_code = tab.status_code();
         if status_code != Some(200) {
             let should_terminate = status_code.is_none();
@@ -229,20 +229,24 @@ impl WebCrawler {
             }
         }
         // - -
-        let _ = web_client_bot::utils::retry_on_timeout(
-            "wait_for_navigation",
-            || async {
-                let result = tab.wait_for_navigation().await;
-                let result: Result<_, Box<dyn std::error::Error + Send + Sync>> = Ok(result);
-                result
-            },
-            1,
-            std::time::Duration::from_secs(1),
-            std::time::Duration::from_secs(5),
-        ).await; // IGNORE POSSIBLE TIMEOUT ERRORS
+        eprintln!("{}", format!("\t 3. TODO").bright_yellow());
+        // {
+        //     let _ = web_client_bot::utils::with_timeout(
+        //         tab.wait_for_navigation(),
+        //         std::time::Duration::from_secs(3),
+        //     ).await; // IGNORE POSSIBLE TIMEOUT ERRORS
+        // }
         // - -
+        eprintln!("{}", format!("\t 4. TODO").bright_yellow());
         let actual_url = {
-            let url = get_actual_url(&tab, 0, 3).await.unwrap();
+            let url = web_client_bot::utils::retry_async(
+                || async {
+                    tab.actual_url().await
+                },
+                3,
+                std::time::Duration::from_secs(3),
+            ).await;
+            let url = url.unwrap();
             Url::from_str(&url).unwrap()
         };
         let did_redirect = &actual_url != url;
@@ -253,44 +257,94 @@ impl WebCrawler {
                 http_status: status_code,
             });
         }
+        eprintln!("{}", format!("\t 5. TODO").bright_yellow());
         // - -
-        match tab.is_text_html_document().await {
-            Ok(true) => (),
-            Ok(false) => {
-                eprintln!("{}", format!(
-                    "\t ⓘ Skipping {:?} : NOT HTML DOCUMENT",
-                    url.to_string()
-                ).red());
-                tab.close().await;
-                // - UPDATE -
-                self.fully_resolved.insert(url.to_owned());
-                self.fully_resolved.insert(canonical_url.0.clone());
-                task_log.entries.push(Status::Failure {
-                    url: OriginalUrl(url.clone()),
-                    http_status: status_code,
-                });
-                self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
-                // - TERMINATE -
-                return
-            },
-            Err(error) => {
-                eprintln!("{}", format!(
-                    "\t ⓘ Skipping {:?} : ERROR CHECKING FOR HTML DOCUMENT : {error}",
-                    url.to_string()
-                ).red());
-                tab.close().await;
-                // - UPDATE -
-                self.fully_resolved.insert(url.to_owned());
-                self.fully_resolved.insert(canonical_url.0.clone());
-                task_log.entries.push(Status::Failure {
-                    url: OriginalUrl(url.clone()),
-                    http_status: status_code,
-                });
-                self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
-                // - TERMINATE -
-                return
+        {
+            let result = web_client_bot::utils::with_timeout_lazy(
+                || async {
+                    tab.is_text_html_document().await
+                },
+                std::time::Duration::from_secs(3),
+            ).await;
+            match result {
+                Ok(Ok(true)) => (),
+                Ok(Ok(false)) => {
+                    eprintln!("{}", format!(
+                        "\t ⓘ Skipping {:?} : NOT HTML DOCUMENT",
+                        url.to_string()
+                    ).red());
+                    tab.close().await;
+                    // - UPDATE -
+                    self.fully_resolved.insert(url.to_owned());
+                    self.fully_resolved.insert(canonical_url.0.clone());
+                    task_log.entries.push(Status::Failure {
+                        url: OriginalUrl(url.clone()),
+                        http_status: status_code,
+                    });
+                    self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
+                    // - TERMINATE -
+                    return
+                },
+                Ok(Err(error)) => {
+                    eprintln!("{}", format!(
+                        "\t ⓘ Skipping {:?} : ERROR CHECKING FOR HTML DOCUMENT : {error}",
+                        url.to_string()
+                    ).red());
+                    tab.close().await;
+                    // - UPDATE -
+                    self.fully_resolved.insert(url.to_owned());
+                    self.fully_resolved.insert(canonical_url.0.clone());
+                    task_log.entries.push(Status::Failure {
+                        url: OriginalUrl(url.clone()),
+                        http_status: status_code,
+                    });
+                    self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
+                    // - TERMINATE -
+                    return
+                }
+                Err(timeout_error) => {
+                    unimplemented!("TODO: {timeout_error}")
+                }
             }
-        };
+        }
+        // match tab.is_text_html_document().await {
+        //     Ok(true) => (),
+        //     Ok(false) => {
+        //         eprintln!("{}", format!(
+        //             "\t ⓘ Skipping {:?} : NOT HTML DOCUMENT",
+        //             url.to_string()
+        //         ).red());
+        //         tab.close().await;
+        //         // - UPDATE -
+        //         self.fully_resolved.insert(url.to_owned());
+        //         self.fully_resolved.insert(canonical_url.0.clone());
+        //         task_log.entries.push(Status::Failure {
+        //             url: OriginalUrl(url.clone()),
+        //             http_status: status_code,
+        //         });
+        //         self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
+        //         // - TERMINATE -
+        //         return
+        //     },
+        //     Err(error) => {
+        //         eprintln!("{}", format!(
+        //             "\t ⓘ Skipping {:?} : ERROR CHECKING FOR HTML DOCUMENT : {error}",
+        //             url.to_string()
+        //         ).red());
+        //         tab.close().await;
+        //         // - UPDATE -
+        //         self.fully_resolved.insert(url.to_owned());
+        //         self.fully_resolved.insert(canonical_url.0.clone());
+        //         task_log.entries.push(Status::Failure {
+        //             url: OriginalUrl(url.clone()),
+        //             http_status: status_code,
+        //         });
+        //         self.project.persist_task_log(&snapshot_directory, task_log).unwrap();
+        //         // - TERMINATE -
+        //         return
+        //     }
+        // };
+        eprintln!("{}", format!("\t 6. TODO").bright_yellow());
         {
             let maybe_fully_settled = web_client_bot::utils::retry_on_timeout(
                 "wait_until_fully_settled",
@@ -311,7 +365,9 @@ impl WebCrawler {
             }
         }
         // - DOM SNAPSHOT -
+        eprintln!("{}", format!("\t 7. TODO").bright_yellow());
         let html = tab.html_content().await;
+        eprintln!("{}", format!("\t 8. TODO").bright_yellow());
         let outgoing_anchors_links = tab.scrape_all_anchor_links().await.unwrap();
         let outgoing_anchors = outgoing_anchors_links
             .iter()
@@ -365,6 +421,7 @@ impl WebCrawler {
             self.fully_resolved.insert(url.to_owned());
             self.fully_resolved.insert(canonical_url.0.clone());
         }
+        eprintln!("{}", format!("\t 9. TODO").bright_yellow());
         // - CLOSE -
         tab.close().await;
     }

@@ -85,25 +85,26 @@ impl TaskLog {
         given_url: &Url,
         snapshot_directory: &SnapshotDirectory,
     ) -> bool {
+        let _ = snapshot_directory; // TODO
         // let snapshot_directory = snapshot_file_path.parent().unwrap();
-        let log_file = snapshot_directory.join(Self::TOML_LOG_FILE_NAME);
-        let existing = std::fs::read_to_string(&log_file)
-            .map_err(|x| Box::new(x) as Box<dyn std::error::Error>)
-            .and_then(|contents| {
-                let data = toml::from_str::<Self>(&contents)?;
-                Ok(data)
-            })
-            .map(|x| x.entries)
-            // .inspect_err(|error| {
-            //     eprintln!("{}", format!(
-            //         "\t ☞ [notice] tried to read cached file (not necessarily an issue): {error}",
-            //     ).blue());
-            // })
-            .unwrap_or_default();
+        // let log_file = snapshot_directory.join(Self::TOML_LOG_FILE_NAME);
+        // let existing = std::fs::read_to_string(&log_file)
+        //     .map_err(|x| Box::new(x) as Box<dyn std::error::Error>)
+        //     .and_then(|contents| {
+        //         let data = toml::from_str::<Self>(&contents)?;
+        //         Ok(data)
+        //     })
+        //     .map(|x| x.entries)
+        //     // .inspect_err(|error| {
+        //     //     eprintln!("{}", format!(
+        //     //         "\t ☞ [notice] tried to read cached file (not necessarily an issue): {error}",
+        //     //     ).blue());
+        //     // })
+        //     .unwrap_or_default();
         let all_entries = self.entries
             .clone()
             .into_iter()
-            .chain(existing)
+            // .chain(existing)
             .collect::<IndexSet<_>>();
         for entry in all_entries {
             match entry {
