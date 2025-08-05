@@ -1,0 +1,31 @@
+[package]
+name = "web-recorder"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.37", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"]}
+toml = "0.8.23"
+futures = "0.3"
+tokio = { version = "1.45.1", features = ["full"] }
+colored = "3.0.0"
+# async-trait = "0.1.88"
+chrono = "0.4"
+url = { version = "2", features = ['serde']}
+sha2 = "0.10.9"
+# walkdir = "2.5.0"
+# once_cell = "1.19"
+indexmap = { version = "2.10.0", features = ['serde']}
+# wax = "0.6.0"
+base64 = "0.22.1"
+
+web-client-bot = { path = "../web-client-bot" }
+google-types = { path = "../google-types" }
+
+[dependencies.chromiumoxide]
+git = "https://github.com/mattsse/chromiumoxide"
+features = ["tokio", "tokio-runtime"]
+default-features = false
+branch = "main"

@@ -5,10 +5,49 @@ pub mod utils;
 use std::i64;
 // use std::pin::Pin;
 
-use chromiumoxide::browser::{Browser, BrowserConfig};
+use chromiumoxide::browser::Browser;
 use chromiumoxide::Page;
 use futures::StreamExt;
 use colored::Colorize;
+
+// ————————————————————————————————————————————————————————————————————————————
+// SETTINGS
+// ————————————————————————————————————————————————————————————————————————————
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum HeadlessMode {
+    /// The "headful" mode.
+    False,
+    /// The old headless mode.
+    #[default]
+    True,
+    /// The new headless mode. See also: https://developer.chrome.com/docs/chromium/new-headless
+    New,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct WebClientSettings {
+    pub headless_mode: Option<HeadlessMode>,
+}
+
+impl WebClientSettings {
+    fn chrome_browser_config_builder(&self) -> chromiumoxide::browser::BrowserConfigBuilder {
+        let mut builder = chromiumoxide::browser::BrowserConfigBuilder::default();
+        if let Some(headless_mode) = self.headless_mode.as_ref() {
+            let headless_mode = match headless_mode {
+                HeadlessMode::False => chromiumoxide::browser::HeadlessMode::False,
+                HeadlessMode::True => chromiumoxide::browser::HeadlessMode::True,
+                HeadlessMode::New => chromiumoxide::browser::HeadlessMode::New,
+            };
+            builder = builder.headless_mode(headless_mode);
+        }
+        builder
+    }
+}
+
+// ————————————————————————————————————————————————————————————————————————————
+// WEB CLIENT
+// ————————————————————————————————————————————————————————————————————————————
 
 #[derive(Debug)]
 pub struct WebClient {
@@ -16,8 +55,11 @@ pub struct WebClient {
 }
 
 impl WebClient {
-    pub async fn start() -> WebClient {
-        let browser_config = BrowserConfig::builder().build().unwrap();
+    pub async fn start(web_client_settings: WebClientSettings) -> WebClient {
+        let browser_config = web_client_settings
+            .chrome_browser_config_builder()
+            .build()
+            .unwrap();
         let (browser, mut handler) = Browser::launch(browser_config).await.unwrap();
         tokio::spawn(async move {
             while let Some(payload) = handler.next().await {

@@ -92,6 +92,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.98"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
+
+[[package]]
 name = "async-trait"
 version = "0.1.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -417,6 +423,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dev"
+version = "0.1.0"
+dependencies = [
+ "google-types",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -650,6 +665,18 @@ name = "gimli"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
+
+[[package]]
+name = "google-types"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "colored",
+ "serde",
+ "serde_json",
+ "url",
+]
 
 [[package]]
 name = "hashbrown"
@@ -2065,6 +2092,7 @@ dependencies = [
 name = "web-analysis"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "colored",
  "once_cell",
  "serde",
@@ -2133,6 +2161,27 @@ dependencies = [
  "url",
  "walkdir",
  "wax",
+ "web-client-bot",
+]
+
+[[package]]
+name = "web-recorder"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "chromiumoxide",
+ "chrono",
+ "clap",
+ "colored",
+ "futures",
+ "google-types",
+ "indexmap",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+ "toml",
+ "url",
  "web-client-bot",
 ]
 

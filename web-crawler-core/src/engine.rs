@@ -86,7 +86,7 @@ impl WebCrawler {
     //     Ok(())
     // }
     pub async fn execute(&mut self) {
-        let mut client = web_client_bot::WebClient::start().await;
+        let mut client = web_client_bot::WebClient::start(Default::default()).await;
         while let Some(task) = self.queue.pop_front() {
             self.process_url(&task, &mut client).await;
         }

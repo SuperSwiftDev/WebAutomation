@@ -1,4 +1,4 @@
 [workspace]
-members = ["web-analysis", "web-automation-manifest", "web-client-bot", "web-crawler", "web-crawler-core"]
+members = ["dev", "google-types", "web-analysis", "web-automation-manifest", "web-client-bot", "web-crawler", "web-crawler-core", "web-recorder"]
 
 resolver = "3"  # Use resolver version 3 (recommended for edition 2021/2024)

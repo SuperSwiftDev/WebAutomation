@@ -64,3 +64,9 @@ web-crawler.private.toml
 web-automation.private.toml
 
 /.output
+
+NOTES.private.md
+
+web-recorder.private.toml
+
+/.web-recorder
